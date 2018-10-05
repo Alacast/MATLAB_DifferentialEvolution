@@ -476,6 +476,8 @@ classdef MODEL < handle
       for ss = 1:length(subDirs)
         addpath([MODEL.file_root subDirs{ss} filesep])
       end
+      % add subsubfolders
+      addpath([MODEL.file_root 'depend' filesep 'exportfig' filesep])
     end
     
     

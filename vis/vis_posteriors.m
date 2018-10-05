@@ -10,7 +10,8 @@ lineHandles = flip(findobj('Parent',paramAx{1},'Type','Line'));
 highLine = [];
 
 % % % setup figure % % %
-f.H = fig(100,'cf');
+f.H = figure(100);
+clf(f.H); hold on
 f.H.MenuBar = 'none';
 f.H.NumberTitle = 'off';
 
