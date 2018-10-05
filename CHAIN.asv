@@ -83,7 +83,7 @@ classdef CHAIN < matlab.mixin.Copyable
     end
     
     function reset_value(C,~,~)
-      % reset the parameter's current value to the 50th percentile of its prior distribution.
+      % reset the parameter's current value to the 50th percentile of its prior distribution.      
       for pp = 1:size(C.priors,1)
         C.update_hier(pp);
         P = C.priors(pp,:);
@@ -115,13 +115,13 @@ classdef CHAIN < matlab.mixin.Copyable
       end
     end
     
-    function params_hierarchical(C,pp)
+    function params_hierarchical(C,pp)      
       % first pull out the parameters named in the bayes structure
       if ~isempty(C.priors{pp,4})
-        P2 = C.params(C.priors{pp,4});
+         P2 = C.params(C.priors{pp,4});
       end
       if ~isempty(C.priors{pp,5})
-        P3 = C.params(C.priors{pp,5});
+         P3 = C.params(C.priors{pp,5});
       end
       
       % if the 6th column is not empty, then it is being used to define a
@@ -150,16 +150,12 @@ classdef CHAIN < matlab.mixin.Copyable
     
     function isH = isHier(P)
       % if there are fewer than 4 columns in the priors array, then none of
-      % the parameters are hierarchical.
-      if size(P,2) < 4
-        isH = 0;
+      % the parameters are hierarchic
+      
+      if ~isempty(P{4}) || ~isempty(P{5})
+        isH = 1;
       else
-        % if there are 4+ columns, at least 1 parameter might be hierarchical
-        if ~isempty(P{4}) || ~isempty(P{5})
-          isH = 1;
-        else
-          isH = 0;
-        end
+        isH = 0;
       end
     end
     

@@ -418,7 +418,26 @@ classdef MODEL < handle
       end
     end
     
-    
+    %%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%% FILE MGMT %%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % % % create new model % % %
+    function file_new(M)
+      % first, store the working directory that was in place when MODEL was
+      % called
+      prevDirectory = pwd;
+      % move to the directory where MODEL is stored
+      modelDirectory = mfilename('fullpath');
+      modelDirectory = [strrep(modelDirectory,[filesep 'MODEL'],'') filesep 'examples' filesep];
+      cd(modelDirectory)
+      % copy the newModel.m function into the previous directory
+      copyfile('newModel.m',prevDirectory)
+      % move back to the old directory
+      cd(prevDirectory)
+      edit('newModel.m')
+      delete('newModel')
+    end
     
     %%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -458,25 +477,6 @@ classdef MODEL < handle
   end
   
   methods (Static)
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%% FILE MGMT %%%%%%%%%%%%%%%%%%%%%%%%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % % % create new model % % %
-    function file_new(newFileName)
-      % first, store the working directory that was in place when MODEL was
-      % called
-      prevDirectory = pwd;
-      % move to the directory where MODEL is stored
-      modelDirectory = mfilename('fullpath');
-      modelDirectory = [strrep(modelDirectory,[filesep 'MODEL'],'') filesep 'examples' filesep];
-      cd(modelDirectory)
-      % copy the newModel.m function into the previous directory
-      copyfile('newModel.m',[prevDirectory filesep newFileName '.m'])
-      % move back to the old directory
-      cd(prevDirectory)
-      edit(newFileName)
-    end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%% COMPUTE %%%%%%%%%%%%%%%%%%%%%%%%%
