@@ -25,7 +25,8 @@ classdef MODEL < handle
       if nargin > 0
         M.set_fcn(varargin{1})
       end
-      
+      % add subfolders to path
+      M.file_addpaths
     end
     
     function init_model(M)
@@ -470,9 +471,11 @@ classdef MODEL < handle
     end
     
     % % % subdirectories % % %
-    function fite_subDir
-      D = dir(MODEL.file_root);
-      isFolder = cat(1,D(:).isfolder)
+    function file_addpaths
+      subDirs = {'depend','examples','vis'};
+      for ss = 1:length(subDirs)
+        addpath([MODEL.file_root subDirs{ss} filesep])
+      end
     end
     
     
