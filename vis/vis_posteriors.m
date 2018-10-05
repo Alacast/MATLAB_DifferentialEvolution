@@ -1,7 +1,7 @@
 function mlb2_showPosterior(model,paramAx)
 
 
-plotCol = cbrewer('seq','Blues',1)' * [0; 0; 1];
+plotCol = [.1922,.5098,.7412]';
 
 %% Create interface
 % % % grab handle for other figure % % %
