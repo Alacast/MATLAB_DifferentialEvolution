@@ -25,6 +25,7 @@ classdef MODEL < handle
       if nargin > 0
         M.set_fcn(varargin{1})
       end
+      
     end
     
     function init_model(M)
@@ -462,6 +463,19 @@ classdef MODEL < handle
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%% FILE MGMT %%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % % % root directory of MODEL % % %
+    function modelDirectory = file_root
+      modelDirectory = mfilename('fullpath');
+      modelDirectory = [strrep(modelDirectory,[filesep 'MODEL'],'') filesep];
+    end
+    
+    % % % subdirectories % % %
+    function fite_subDir
+      D = dir(MODEL.file_root);
+      isFolder = cat(1,D(:).isfolder)
+    end
+    
+    
     % % % create new model % % %
     function file_new(newFileName)
       % first, store the working directory that was in place when MODEL was
