@@ -111,18 +111,35 @@ classdef CHAIN < matlab.mixin.Copyable
     % % allows these to be hierarchical
     function update_hier(C,pp)
       if CHAIN.isHier(C.priors(pp,:))
-        hier_params(C,pp)
+        params_hierarchical(C,pp)
       end
     end
     
-    function hier_params(C,pp)      
+    function params_hierarchical(C,pp)      
+      % first pull out the parameters named in the bayes structure
       if ~isempty(C.priors{pp,4})
-        C.priors{pp,2} = C.params(C.priors{pp,4});
+         P2 = C.params(C.priors{pp,4});
       end
       if ~isempty(C.priors{pp,5})
-        C.priors{pp,3} = C.params(C.priors{pp,5});
-      end      
+         P3 = C.params(C.priors{pp,5});
+      end
+      
+      % if the 6th column is not empty, then it is being used to define a
+      % function to operate on, over the variables listed in column 5
+      if ~isempty(C.priors{pp,6})
+        C.priors{pp,2} = C.priors{pp,6}(P2);
+      else
+        C.priors{pp,2} = P2;
+      end
+      % if the 7th column is not empty, then it is being used to define a
+      % function to operate on, over the variables listed in column 6
+      if ~isempty(C.priors{pp,7})
+        C.priors{pp,3} = C.priors{pp,7}(P3);
+      else
+        C.priors{pp,3} = P3;
+      end
     end
+    
   end
   methods (Static)
     

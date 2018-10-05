@@ -321,7 +321,7 @@ classdef MODEL < handle
     % % % plot likelihoods % % %
     function ax = plot_like(M)
       ax = subplot(1,3,2);
-      cla; hold on
+      cla
       semilogy(M.store.like)
       hold on
       M.shade_burnin(gca);
@@ -439,7 +439,7 @@ classdef MODEL < handle
         progressbar(M.names.self)
       end
       
-      if ~rem(tt,percent1)
+      if ~rem(tt,percent1) || (tt == M.settings.n.steps)
         progressbar(tt/M.settings.n.steps);
       end
     end

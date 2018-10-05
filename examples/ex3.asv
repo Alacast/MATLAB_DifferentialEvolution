@@ -56,11 +56,8 @@ switch OPmode
     subMeans = params(1) + params(3:5);
     condMeans = params(end) * [1,-1];
     subMeanList = subMeans(data(:,2));
-    condMeanList = condMeans(data(:,3));
     
-    meansAll = subMeanList + condMeanList;
-    
-    O = MODEL.calc_safeLL(normpdf(data(:,1),meansAll',1));
+    O = MODEL.calc_safeLL(normpdf(data(:,1),meanInd',1));
   case 'pred'
     O = nan;
 
