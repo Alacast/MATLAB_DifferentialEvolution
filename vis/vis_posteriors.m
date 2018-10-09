@@ -11,7 +11,10 @@ highLine = [];
 
 % % % setup figure % % %
 f.H = figure(100);
-clf(f.H); hold on
+clf(f.H); 
+f.H.Units = 'normalized';
+f.H.Position = [.1,.1,.45,.8];
+hold on
 f.H.MenuBar = 'none';
 f.H.NumberTitle = 'off';
 
