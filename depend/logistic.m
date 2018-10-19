@@ -8,7 +8,7 @@ else
   steep = 1;
 end
 
-fcn = @(p) 1 ./ (1+exp(-steep*p));
+fcn = @(p) 1 ./ (1+exp(-steep.*p));
 
 L = fcn(p);
 end

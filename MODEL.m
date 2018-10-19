@@ -10,7 +10,7 @@ classdef MODEL < handle
     
     settings = struct(...
       'n',...
-      struct('steps',1000,'chains',3,'groups',1),...
+      struct('steps',1000,'predict',1000,'chains',3,'groups',1),...
       'sampling',...
       struct('pBurnin',0.25,'pMigrate',0.1,'pMutate',1),...
       'usePrevious',1)
@@ -41,8 +41,18 @@ classdef MODEL < handle
     function init_chains(M)
       G = M.calc_groups;
       % create empty arrays
+      if isempty(M.CHAINS) || ~M.settings.usePrevious
+        resetChain = 1;
+      else
+        resetChain = 0;
+      end
       for cc = 1:M.settings.n.chains
-        if ~M.settings.usePrevious || length(M.CHAINS) < cc
+        if length(M.CHAINS) >= cc
+          if any(isnan(M.CHAINS(cc).params))
+            resetChain = 1;
+          end
+        end
+        if resetChain
           % make the chain
           M.CHAINS(cc) = CHAIN();
           % insert the priors
@@ -51,29 +61,28 @@ classdef MODEL < handle
           M.CHAINS(cc).reset_value;
           % define bounds for each parameter
           M.CHAINS(cc).calc_range
+          % set up the proposal distribution
+          M.CHAINS(cc).prop.heatWindow = round(0.1 * M.settings.n.steps);
         else
         end
         
         % storage vectors
         M.CHAINS(cc).LIKE = nan(M.settings.n.steps,3);
-        M.CHAINS(cc).PREDICTION = cell(M.settings.n.steps,1);
+        M.CHAINS(cc).PREDICTION = cell(M.settings.n.predict,1);
         M.CHAINS(cc).PARAMS = nan(M.settings.n.steps,M.settings.n.params);
-        M.CHAINS(cc).KEPT = nan(M.settings.n.steps,1);
+        M.CHAINS(cc).KEPT = zeros(M.settings.n.steps,1);
         
         % calculate the priors for the initial run
         M.CHAINS(cc).calc_prior
         
         % assign this chain to its group
         M.CHAINS(cc).group = G(cc);
-        
-        % set up the proposal distribution
-        M.CHAINS(cc).prop.heatWindow = round(0.001 * M.settings.n.steps);
       end
     end
     
     function fit(M)
       M.init_model
-      M.init_chains      
+      M.init_chains
       
       tic
       for tt = 2:M.settings.n.steps
@@ -114,7 +123,7 @@ classdef MODEL < handle
     end
     
     function predict(M)
-      for tt = 1:M.settings.n.steps
+      for tt = 1:M.settings.n.predict
         % progress bar
         M.show_progress(tt)
         for cc = 1:M.settings.n.chains
@@ -130,21 +139,24 @@ classdef MODEL < handle
     function collect_chains(M)
       % initialize arrays
       nC_nS = M.settings.n.chains * M.settings.n.steps;
+      nC_nP = M.settings.n.chains * M.settings.n.predict;
       M.store.params = nan(nC_nS,size(M.CHAINS(1).PARAMS,2));
       M.store.like = nan(nC_nS,size(M.CHAINS(1).LIKE,2));
       M.store.kept = nan(nC_nS,size(M.CHAINS(1).KEPT,2));
-      M.store.prediction = nan(nC_nS,size(M.CHAINS(1).PREDICTION{1},2));
+      M.store.prediction = nan(nC_nP,size(M.CHAINS(1).PREDICTION{1},2));
       % loop through chains
       for cc = 1:M.settings.n.chains
         % indices
         ii(1) = M.settings.n.steps * (cc-1) + 1;
         ii(2) = ii(1) + M.settings.n.steps - 1;
+        ip(1) = M.settings.n.predict * (cc-1) + 1;
+        ip(2) = ip(1) + M.settings.n.predict - 1;
         % concatenate
         M.store.params(ii(1):ii(2),:) = M.CHAINS(cc).PARAMS;
         M.store.like(ii(1):ii(2),:) = M.CHAINS(cc).LIKE;
-        M.store.kept(ii(1):ii(2),:) = M.CHAINS(cc).KEPT;        
-        M.store.prediction(ii(1):ii(2),:) = cat(1,M.CHAINS(cc).PREDICTION{:});
-      end      
+        M.store.kept(ii(1):ii(2),:) = M.CHAINS(cc).KEPT;
+        M.store.prediction(ip(1):ip(2),:) = cat(1,M.CHAINS(cc).PREDICTION{:});
+      end
     end
     
     
@@ -191,18 +203,18 @@ classdef MODEL < handle
     % % % crossover % % %
     function prop_crossover(M,I,tt)
       G = cat(2,M.CHAINS.group);
-      CTEMP = nan(M.settings.n.chains,M.settings.n.params);
-      for cc = 1:length(I)
+      CTEMP = nan(length(I),M.settings.n.params);
+      for ii = 1:length(I)
         % see Approximate Bayesian computation with differential evolution, page 4
         
         % % % get group association % % %
-        C = M.CHAINS(I(cc));
+        C = M.CHAINS(I(ii));
         % what group is this chain in?
         myGroup = C.group;
         % which other chains are in this group
         groupChains = find(G == myGroup);
         % this chain ignores itself
-        groupChains(groupChains == cc) = [];
+        groupChains(groupChains == I(ii)) = [];
         
         % % % sample a base particle with probability proportional to overall fit % % %
         % log posteriors of others in group
@@ -228,6 +240,7 @@ classdef MODEL < handle
         csWeights = cumsum(normedWeights);
         r = sum(rand > csWeights)+1;
         theta_B = groupChains(r);
+        
         
         % % % sample two other reference particles % % %
         % don't resample the base particle from above
@@ -255,10 +268,13 @@ classdef MODEL < handle
         end
         b = (.002 * rand) - .001;
         
-        CTEMP(cc,:) = gamma1.*(refDist) + gamma2*(baseDist) + b;
-        
+        CTEMP(ii,:) = gamma1.*(refDist) + gamma2*(baseDist) + b;
       end
       
+      for ii = 1:length(I)
+        C = M.CHAINS(I(ii));
+        C.params = C.params + CTEMP(ii,:);
+      end
     end
     
     % % % migrate % % %
@@ -302,6 +318,7 @@ classdef MODEL < handle
     
     % % % plot all % % %
     function plot_all(M)
+      % set up initial figure
       f201 = figure(201);clf
       f201.Name = [M.names.self '_fitting'];
       smh_exportFigButton(f201,[filesep M.names.self filesep]);
@@ -309,6 +326,9 @@ classdef MODEL < handle
       M.plot_like;
       M.plot_kept;
       M.hist_params(paramAx);
+      
+      % try to run the model-specific plotting function
+      M.plot_user
     end
     
     % % % plot params % % %
@@ -348,10 +368,15 @@ classdef MODEL < handle
       vis_posteriors(M,varargin)
     end
     
+    % % % plotting mode associated with model script % % %
+    function plot_user(M)
+      M.fcn{1}('plot',M);
+    end
+    
     % % % select burn-in % % %
-    function dOut = select_burnin(M,dIn)
+    function dOut = select_burnin(M,dIn,mode)
       bInd = [];
-      I = M.calc_burnIndices;
+      I = M.calc_burnIndices(mode);
       for cc = 1:M.settings.n.chains
         bInd = [bInd,I(1,cc):I(2,cc)];
       end
@@ -361,12 +386,12 @@ classdef MODEL < handle
     
     % % % shade burn-in % % %
     function shade_burnin(M,ax)
-      I = M.calc_burnIndices;
+      I = M.calc_burnIndices('fit');
       Y = ax.YLim;
       for cc = 1:M.settings.n.chains
-        area(I([1 1 2 2],cc)',Y([1 2 2 1]),Y(1),...
+        A = area(I([1 1 2 2],cc)',Y([1 2 2 1]),Y(1),...
           'FaceColor',[0 0 0],'FaceAlpha',0.05,...
-          'EdgeAlpha',0)
+          'EdgeAlpha',0,'PickableParts','none');
       end
     end
     
@@ -375,10 +400,16 @@ classdef MODEL < handle
     %%%%%%%%%%%%%%%%%%%%%%%% CALCULATE %%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % % % burnin indices % % %
-    function I = calc_burnIndices(M)
-      I = round(M.settings.n.burnin):...
-        M.settings.n.steps:(M.settings.n.steps * M.settings.n.chains);
-      I = [[(1:M.settings.n.chains)-1] * M.settings.n.steps;I];
+    function I = calc_burnIndices(M,mode)
+      switch mode
+        case 'fit'
+          nSteps = M.settings.n.steps;
+        case 'predict'
+          nSteps = M.settings.n.predict;
+      end
+      I = round(M.settings.sampling.pBurnin * nSteps):...
+        nSteps:(nSteps * M.settings.n.chains);
+      I = [[(1:M.settings.n.chains)-1] * nSteps;I];
       I(1,:) = I(1,:) + 1;
     end
     
@@ -397,7 +428,7 @@ classdef MODEL < handle
           % crossover is worthless. If that's the case, update the pMutate
           % to be 0.5 instead
           if M.settings.sampling.pMutate == 1
-            M.settings.sampling.pMutate = 0.5;
+            M.settings.sampling.pMutate = 0.25;
           end
           
         else
@@ -429,7 +460,7 @@ classdef MODEL < handle
     % % % compute information about the posterior distribution % % %
     function diag_post(M)
       for pp = 1:M.settings.n.params
-        burnParamVals = M.select_burnin(M.store.params(:,pp));
+        burnParamVals = M.select_burnin(M.store.params(:,pp),'fit');
         M.bayes.posteriors.parameters(pp) = M.calc_HDI(burnParamVals);
       end
     end
@@ -447,7 +478,7 @@ classdef MODEL < handle
     % % % progress bar % % %
     function show_progress(M,tt)
       percent1 = max(1,round(.01*M.settings.n.steps));
-      if tt == 1
+      if tt == 2
         progressbar(M.names.self)
       end
       

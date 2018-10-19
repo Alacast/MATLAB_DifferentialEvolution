@@ -13,7 +13,7 @@ classdef CHAIN < matlab.mixin.Copyable
     group = nan;
     
     % proposal properties
-    prop = struct('heatWindow',50,'momentum',.01,'sigma',1);
+    prop = struct('heatWindow',50,'momentum',.01,'sigma',1e-1);
     
     % store log probabilities
     logPrior = nan;
@@ -99,7 +99,7 @@ classdef CHAIN < matlab.mixin.Copyable
         proportionKept = mean(C.KEPT(timesVec));
         acceptMinus234 = proportionKept - 0.234;
         newScale = logistic(acceptMinus234,C.prop.momentum)+.5;
-        newVar = max(1e-10,min(1e-1,newScale .* C.prop.sigma));
+        newVar = max(1e-10,min(1e-2,newScale .* C.prop.sigma));
         C.prop.sigma = newVar;
       else
         % leave it as is
@@ -119,25 +119,27 @@ classdef CHAIN < matlab.mixin.Copyable
       % first pull out the parameters named in the bayes structure
       if ~isempty(C.priors{pp,4})
         P2 = C.params(C.priors{pp,4});
+        
+        % if the 6th column is not empty, then it is being used to define a
+        % function to operate on, over the variables listed in column 5
+        if ~isempty(C.priors{pp,6})
+          C.priors{pp,2} = C.priors{pp,6}(P2);
+        else
+          C.priors{pp,2} = P2;
+        end
       end
       if ~isempty(C.priors{pp,5})
         P3 = C.params(C.priors{pp,5});
+        
+        % if the 7th column is not empty, then it is being used to define a
+        % function to operate on, over the variables listed in column 6
+        if ~isempty(C.priors{pp,7})
+          C.priors{pp,3} = C.priors{pp,7}(P3);
+        else
+          C.priors{pp,3} = P3;
+        end
       end
       
-      % if the 6th column is not empty, then it is being used to define a
-      % function to operate on, over the variables listed in column 5
-      if ~isempty(C.priors{pp,6})
-        C.priors{pp,2} = C.priors{pp,6}(P2);
-      else
-        C.priors{pp,2} = P2;
-      end
-      % if the 7th column is not empty, then it is being used to define a
-      % function to operate on, over the variables listed in column 6
-      if ~isempty(C.priors{pp,7})
-        C.priors{pp,3} = C.priors{pp,7}(P3);
-      else
-        C.priors{pp,3} = P3;
-      end
     end
     
   end
