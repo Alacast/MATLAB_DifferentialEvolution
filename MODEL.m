@@ -189,7 +189,7 @@ classdef MODEL < handle
       
       % make sure all the new values are valid
       for cc = 1:M.settings.n.chains
-        M.CHAINS(cc).calc_range;
+%         M.CHAINS(cc).calc_range;
         M.CHAINS(cc).calc_safeV;
       end
     end

@@ -1,4 +1,13 @@
 function O = ex2(OPmode,varargin)
+
+
+if nargin == 0
+  OPmode = 'init';
+else
+  OPmode = varargin{1};
+end
+
+
 switch OPmode
   case 'init'
     M = MODEL();
