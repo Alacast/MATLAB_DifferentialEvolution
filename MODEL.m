@@ -10,7 +10,7 @@ classdef MODEL < handle
     
     settings = struct(...
       'n',...
-      struct('steps',1000,'predict',1000,'chains',3,'groups',1),...
+      struct('steps',1000,'predict',1000,'chains',4,'groups',1),...
       'sampling',...
       struct('pBurnin',0.25,'pMigrate',0.1,'pMutate',1),...
       'usePrevious',1)
@@ -35,6 +35,11 @@ classdef MODEL < handle
       % naming
       if strcmp(M.names.params,'')
         M.names.params = arrayfun(@(pp) ['\beta_{' num2str(pp) '}'],1:M.settings.n.params,'uni',0);
+      end
+      % ensure priors are size 7
+      for pp = 1:M.settings.n.params
+        numCurrCol = length(M.bayes.priors(pp,:));
+        M.bayes.priors(pp,numCurrCol+1:7) = {[]};
       end
     end
     
@@ -347,7 +352,7 @@ classdef MODEL < handle
     function ax = plot_like(M)
       ax = subplot(1,3,2);
       cla
-      semilogy(M.store.like)
+      plot(M.store.like)
       hold on
       M.shade_burnin(gca);
     end
@@ -428,7 +433,7 @@ classdef MODEL < handle
           % crossover is worthless. If that's the case, update the pMutate
           % to be 0.5 instead
           if M.settings.sampling.pMutate == 1
-            M.settings.sampling.pMutate = 0.25;
+            M.settings.sampling.pMutate = 0.5;
           end
           
         else
@@ -535,7 +540,8 @@ classdef MODEL < handle
     % converts probabilities to log probabilities, after checking to make
     % sure the values are within 0-1
     function safeLL = calc_safeLL(P)
-      safeLike = min(max(1e-20,P),1);
+      P(isinf(P)) = -999;
+      safeLike = max(1e-20,P);
       logSafeLike = log(safeLike);
       safeLL = sum(logSafeLike);
     end

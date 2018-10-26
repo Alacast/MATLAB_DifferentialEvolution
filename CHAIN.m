@@ -31,20 +31,18 @@ classdef CHAIN < matlab.mixin.Copyable
   methods
     
     function C = CHAIN
-      % % % add listeners % % %
-      %       addlistener(C,'priors','PostSet',@C.reset_value);
-      %       addlistener(C,'priors','PostSet',@C.calc_range);
     end
     
     %% CALC
     % % % PRIOR % % %
     function calc_prior(C,~,~)
-      LP = 0;
+      LP = nan(1,size(C.priors,1));
       for pp = 1:size(C.priors,1)
         C.update_hier(pp);
-        LP = LP + CHAIN.update_prior(C.params(pp),C.priors(pp,:));
+        LP(pp) = CHAIN.update_prior(C.params(pp),C.priors(pp,:));
       end
-      C.logPrior = LP;
+      
+      C.logPrior = sum(LP);
     end
     
     % % % LIKELIHOOD % % %
@@ -68,7 +66,7 @@ classdef CHAIN < matlab.mixin.Copyable
       for pp = 1:size(C.priors,1)
         C.update_hier(pp);
         P = C.priors(pp,:);
-        C.range(pp,:) = icdf(P{1},[1e-10,1-(1e-10)],P{2},P{3});
+        C.range(pp,:) = icdf(P{1},[1e-3,1-(1e-3)],P{2},P{3});
       end
     end
     
@@ -110,7 +108,7 @@ classdef CHAIN < matlab.mixin.Copyable
     % returns the values of the prior distribution for a given parameter
     % % allows these to be hierarchical
     function update_hier(C,pp)
-      if CHAIN.isHier(C.priors(pp,:))
+      if CHAIN.isTransform(C.priors(pp,:))
         params_hierarchical(C,pp)
       end
     end
@@ -119,26 +117,30 @@ classdef CHAIN < matlab.mixin.Copyable
       % first pull out the parameters named in the bayes structure
       if ~isempty(C.priors{pp,4})
         P2 = C.params(C.priors{pp,4});
-        
-        % if the 6th column is not empty, then it is being used to define a
-        % function to operate on, over the variables listed in column 5
-        if ~isempty(C.priors{pp,6})
-          C.priors{pp,2} = C.priors{pp,6}(P2);
-        else
-          C.priors{pp,2} = P2;
-        end
+      else
+        P2 = C.priors{pp,2};
       end
+      
+      % if the 6th column is not empty, then it is being used to define a
+      % function to operate on, over the variables listed in column 5
+      C.priors(pp,2) = {P2};
+      if ~isempty(C.priors{pp,6})
+        C.priors{pp,2} = C.priors{pp,6}(P2);
+      end
+      
       if ~isempty(C.priors{pp,5})
         P3 = C.params(C.priors{pp,5});
-        
-        % if the 7th column is not empty, then it is being used to define a
-        % function to operate on, over the variables listed in column 6
-        if ~isempty(C.priors{pp,7})
-          C.priors{pp,3} = C.priors{pp,7}(P3);
-        else
-          C.priors{pp,3} = P3;
-        end
+      else
+        P3 = C.priors{pp,3};
       end
+      
+      % if the 7th column is not empty, then it is being used to define a
+      % function to operate on, over the variables listed in column 6
+      C.priors{pp,3} = P3;
+      if ~isempty(C.priors{pp,7})
+        C.priors{pp,3} = C.priors{pp,7}(P3);
+      end
+      
       
     end
     
@@ -150,18 +152,11 @@ classdef CHAIN < matlab.mixin.Copyable
       LL = MODEL.calc_safeLL(pdf(P{1},V,P{2},P{3}));
     end
     
-    function isH = isHier(P)
-      % if there are fewer than 4 columns in the priors array, then none of
-      % the parameters are hierarchical.
-      if size(P,2) < 4
-        isH = 0;
+    function isH = isTransform(P)
+      if ~isempty(P{4}) || ~isempty(P{5}) || ~isempty(P{6}) || ~isempty(P{7})
+        isH = 1;
       else
-        % if there are 4+ columns, at least 1 parameter might be hierarchical
-        if ~isempty(P{4}) || ~isempty(P{5})
-          isH = 1;
-        else
-          isH = 0;
-        end
+        isH = 0;
       end
     end
     
